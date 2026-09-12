@@ -3,270 +3,339 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginId, setLoginId] = useState('');
-  const [password, setPassword] = useState('');
+  const [currentView, setCurrentView] = useState('LANDING'); 
+  const [user, setUser] = useState('');
   const [role, setRole] = useState('');
-  const [showInstructions, setShowInstructions] = useState(true);
-
+  const [showDemoGuide, setShowDemoGuide] = useState(true); 
+  
+  const [regForm, setRegForm] = useState({ fullName: '', email: '', phone: '', department: 'Haryana Cyber Crime', state: 'Haryana', requestedRole: 'Investigating Officer' });
+  const [otpCode, setOtpCode] = useState('');
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [activeUsers, setActiveUsers] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const [file, setFile] = useState(null);
   const [caseId, setCaseId] = useState('CASE-2026-001');
-  const [user, setUser] = useState(''); 
   const [uploadData, setUploadData] = useState(null);
   const [verifyDocId, setVerifyDocId] = useState('');
   const [verifyHash, setVerifyHash] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
-  
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [searchQuery, setSearchQuery] = useState(''); 
+
+  const API_URL = 'http://localhost:5000/api';
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchLogs();
-    }
-  }, [isLoggedIn]);
+    if (currentView === 'ADMIN_DASH') { fetchPendingRequests(); fetchActiveUsers(); }
+    if (currentView === 'OFFICER_DASH' || currentView === 'ADMIN_DASH') fetchLogs();
+  }, [currentView]);
 
-  const fetchLogs = async () => {
-    try {
-      const response = await axios.get('https://caseverity-backend.onrender.com/api/documents/audit-logs');
-      setAuditLogs(response.data);
-    } catch (error) {
-      console.error("Error fetching logs", error);
-    }
-  };
-
-  const handleLogin = (e) => {
+  const handleRequestAccess = async (e) => {
     e.preventDefault();
-    if (loginId.toLowerCase().includes('admin')) {
-      setRole('System Administrator');
-      setUser(loginId);
-      setIsLoggedIn(true);
-    } else if (loginId !== '' && password !== '') {
-      setRole('Investigating Officer');
-      setUser(loginId);
-      setIsLoggedIn(true);
-    } else {
-      alert("Invalid Credentials. Please enter your Officer ID and Password.");
+    try { 
+      await axios.post(`${API_URL}/auth/request-access`, regForm); 
+      setCurrentView('OTP_VERIFY'); 
+    } catch (err) { 
+      alert(err.response?.data?.message || "Error submitting request. Please try again."); 
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUser('');
-    setRole('');
-    setShowInstructions(true);
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API_URL}/auth/verify-otp`, { email: regForm.email, otp: otpCode });
+      alert(res.data.message); setCurrentView('LANDING');
+    } catch (err) { alert(err.response?.data?.message || "Invalid OTP"); }
+  };
+
+  const handleLogin = async (e, isAdmin = false) => {
+    e.preventDefault();
+    try {
+      const sanitizedPayload = {
+        email: loginForm.email.trim(),
+        password: loginForm.password.trim()
+      };
+      const res = await axios.post(`${API_URL}${isAdmin ? '/auth/admin-login' : '/auth/login'}`, sanitizedPayload);
+      setUser(res.data.user); setRole(res.data.role);
+      setCurrentView(isAdmin ? 'ADMIN_DASH' : 'OFFICER_DASH'); setShowDemoGuide(false);
+    } catch (err) { alert(err.response?.data?.message || "Login failed"); }
+  };
+
+  const fetchPendingRequests = async () => setPendingRequests((await axios.get(`${API_URL}/auth/admin/requests`)).data);
+  const fetchActiveUsers = async () => setActiveUsers((await axios.get(`${API_URL}/auth/admin/users`)).data);
+  const fetchLogs = async () => setAuditLogs((await axios.get(`${API_URL}/audit-logs`)).data);
+
+  const handleAdminAction = async (requestId, assignedRole, action) => {
+    let reason = '';
+    if (action === 'REJECT') {
+      reason = window.prompt("Enter reason for rejection:");
+      if (!reason) return;
+    }
+    await axios.post(`${API_URL}/auth/admin/action`, { requestId, action, assignedRole, reason });
+    fetchPendingRequests(); 
+    alert(action === 'APPROVE' ? `Access Approved for ${assignedRole}. Credentials dispatched.` : `Request Rejected. Email sent.`);
+  };
+
+  const handleManageUser = async (userId, action) => {
+    if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
+    
+    await axios.post(`${API_URL}/auth/admin/manage-user`, { userId, action });
+    fetchActiveUsers();
+    alert(`Action ${action} completed. Email dispatched to user.`);
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) return alert("Please select a file first!");
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caseId', caseId);
-    formData.append('user', user);
-
-    try {
-      const response = await axios.post('https://caseverity-backend.onrender.com/api/documents/upload', formData);
-      setUploadData(response.data);
-      setVerifyDocId(response.data.documentId);
-      setVerifyHash(response.data.fileHash);
-      fetchLogs(); 
-    } catch (error) {
-      alert("Error uploading file.");
-    }
+    formData.append('file', file); formData.append('caseId', caseId); formData.append('user', user);
+    const res = await axios.post(`${API_URL}/documents/upload`, formData);
+    setUploadData(res.data); setVerifyDocId(res.data.documentId); setVerifyHash(res.data.fileHash); fetchLogs();
   };
 
   const handleVerify = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('https://caseverity-backend.onrender.com/api/documents/verify', {
-        documentId: verifyDocId,
-        providedHash: verifyHash
+      const res = await axios.post(`${API_URL}/documents/verify`, { 
+        documentId: verifyDocId.trim(), 
+        providedHash: verifyHash.trim(), 
+        user 
       });
-      setVerifyResult({ type: 'success', message: response.data.message });
-    } catch (error) {
-      if (error.response && error.response.status === 400) {
-        setVerifyResult({ type: 'danger', message: error.response.data.message });
-      } else {
-        alert("Verification Error");
-      }
+      setVerifyResult({ type: 'success', message: res.data.message });
+    } catch (err) { 
+      // Safely checks for 'message', then 'error', then provides a default string
+      const errorText = err.response?.data?.message || err.response?.data?.error || "Verification failed. Please check the Document ID and Hash.";
+      setVerifyResult({ type: 'danger', message: errorText }); 
     }
+    fetchLogs();
   };
 
-  const filteredLogs = auditLogs.filter(log => 
-    log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.currentHash.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // ==========================================
-  // RENDER LOGIN SCREEN (WHITE & BLUE)
-  // ==========================================
-  if (!isLoggedIn) {
+  const DemoGuide = () => {
+    if (!showDemoGuide) return null;
     return (
-      <div className="login-wrapper">
-        {showInstructions && (
-          <div className="premium-popup">
-            <button className="close-popup-btn" onClick={() => setShowInstructions(false)} title="Dismiss">✖</button>
-            <h3>✨ Demo Access Guide</h3>
-            <p><strong>Admin Access:</strong> Use any ID containing "admin" (e.g., <em>admin_01</em>).</p>
-            <p><strong>Officer Access:</strong> Use your assigned name (e.g., <em>Officer_name</em>).</p>
-            <p className="popup-note">*Prototype bypasses strict password checks for demo purposes.</p>
-          </div>
-        )}
+      <div className="premium-popup">
+        <button className="close-popup-btn" onClick={() => setShowDemoGuide(false)}>✖</button>
+        <h3>💡 SIH 2026 Demo Guide</h3>
+        <p><strong>Admin:</strong> admin@caseverity.gov.in / Admin@2026</p>
+        <p style={{ marginTop: '10px' }}><strong>Step-by-Step Flow:</strong></p>
+        <ul className="guide-list">
+          <li>1. Click <b>"Request Access"</b>.</li>
+          <li>2. Get OTP. "Pending Details" email is sent.</li>
+          <li>3. Click <b>"Administrator Portal"</b> & Login.</li>
+          <li>4. Use <b>Approve/Reject/Revoke</b> controls.</li>
+          <li>5. Login using <b>Officer ID</b> sent via email!</li>
+        </ul>
+      </div>
+    );
+  };
 
-        <div className="card login-card">
-          <div className="login-header">
-            <h2 className="section-title">CaseVerity Auth</h2>
-            <span className="section-subtitle">Authorized Personnel Only</span>
+  if (currentView === 'LANDING') {
+    return (
+      <div className="landing-container">
+        <DemoGuide />
+        <div className="landing-overlay">
+          <div className="landing-content">
+            <h1 className="main-heading">CASEVERITY</h1>
+            <h3 className="sub-heading">Secure Digital Document Management System</h3>
+            <div className="landing-actions">
+              <button className="btn btn-primary" onClick={() => setCurrentView('LOGIN')}>Official Login</button>
+              <button className="btn btn-secondary" onClick={() => setCurrentView('REQUEST_ACCESS')}>Request Access</button>
+            </div>
+            <div className="admin-link" onClick={() => setCurrentView('ADMIN_LOGIN')}>System Administrator Portal</div>
           </div>
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label>Officer ID / Username</label>
-              <input type="text" className="form-control" value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder="e.g., Officer_Name" required />
-            </div>
-            <div className="form-group">
-              <label>Secure Password</label>
-              <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '15px' }}>Authenticate & Login</button>
-          </form>
-          <div className="login-footer">Powered by SHA-256 Encryption & RBAC</div>
         </div>
       </div>
     );
   }
 
-  // ==========================================
-  // RENDER MAIN DASHBOARD (WHITE & BLUE)
-  // ==========================================
+  if (currentView === 'REQUEST_ACCESS') {
+    return (
+      <div className="login-wrapper">
+        <DemoGuide />
+        <div className="card login-card request-card">
+          <h2 className="section-title">Access Request</h2><span className="section-subtitle">Identity & Affiliation Verification</span>
+           <form onSubmit={handleRequestAccess}>
+            <div className="form-group">
+              <label>Full Name</label>
+              <input type="text" className="form-control" value={regForm.fullName} onChange={e => setRegForm({...regForm, fullName: e.target.value})} required/>
+            </div>
+            
+            <div className="form-group">
+              <label>Official Email (For OTP)</label>
+              <input type="email" className="form-control" value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} required/>
+            </div>
+            
+            <div className="responsive-flex">
+              <div className="form-group">
+                <label>Mobile</label>
+                <input type="text" className="form-control" value={regForm.phone} onChange={e => setRegForm({...regForm, phone: e.target.value})} required/>
+              </div>
+              
+              <div className="form-group">
+                <label>Requested Role</label>
+                <select className="form-control" value={regForm.requestedRole} onChange={e => setRegForm({...regForm, requestedRole: e.target.value})}>
+                  <option value="Investigating Officer">Investigating Officer</option>
+                  <option value="Forensic Officer">Forensic Officer</option>
+                  <option value="Public Prosecutor">Public Prosecutor</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label>Affiliation Proof (PDF/JPG)</label>
+              <input type="file" className="form-control" required/>
+            </div>
+            
+            <button className="btn btn-primary btn-spacing">Generate Email OTP</button>
+            <button type="button" className="btn btn-secondary btn-spacing" onClick={() => setCurrentView('LANDING')}>Cancel</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'OTP_VERIFY') {
+    return (
+      <div className="login-wrapper">
+        <div className="card login-card">
+          <h2 className="section-title">Verify Email</h2><span className="section-subtitle">Enter code sent to {regForm.email}</span>
+          <form onSubmit={handleVerifyOTP}>
+            <div className="form-group"><input type="text" className="form-control otp-input" placeholder="000000" onChange={e => setOtpCode(e.target.value)} required/></div>
+            <button className="btn btn-primary">Verify & Submit Request</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'LOGIN' || currentView === 'ADMIN_LOGIN') {
+    const isAdmin = currentView === 'ADMIN_LOGIN';
+    return (
+      <div className="login-wrapper">
+        <DemoGuide />
+        <div className="card login-card">
+          <h2 className="section-title">{isAdmin ? 'Administrator Portal' : 'Official Portal'}</h2>
+          <form onSubmit={(e) => handleLogin(e, isAdmin)}>
+            <div className="form-group"><label>{isAdmin ? 'Admin ID' : 'Officer ID / Official Email'}</label><input type="text" className="form-control" onChange={e => setLoginForm({...loginForm, email: e.target.value})} required/></div>
+            <div className="form-group"><label>Password</label><input type="password" className="form-control" onChange={e => setLoginForm({...loginForm, password: e.target.value})} required/></div>
+            <button className="btn btn-primary btn-spacing">Authenticate</button>
+            <button type="button" className="btn btn-secondary btn-spacing" onClick={() => setCurrentView('LANDING')}>Back</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-layout">
       <nav className="top-nav">
-        <div className="nav-brand">
-          <h1>CaseVerity</h1>
-          <span>Secure Digital Document Management | SIH26190</span>
-        </div>
-        <div className="nav-user">
-          <div className="user-info">
-            Active Session: <strong>{user}</strong> <br/>
-            <span>Role: {role}</span>
-          </div>
-          <button className="btn-logout" onClick={handleLogout}>Logout</button>
-        </div>
+        <div className="nav-brand"><h1>CaseVerity Node</h1></div>
+        <div className="nav-user">{user} | {role} <button className="btn-logout" onClick={() => setCurrentView('LANDING')}>Logout</button></div>
       </nav>
 
       <main className="main-container">
-        <div className="dashboard-grid">
-          
-          <div className="card">
-            <div className="card-header">
+        {role === 'Administrator' && (
+          <>
+            <div className="card full-width bottom-spacing">
+              <h2 className="section-title">Pending Access Requests</h2>
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead><tr><th>Applicant</th><th>Role & Dept</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {pendingRequests.map(req => (
+                      <tr key={req._id}>
+                        <td><strong>{req.fullName}</strong><br/>{req.email}</td>
+                        <td><span className="action-badge">{req.requestedRole}</span><br/><small>{req.department}</small></td>
+                        <td className="action-td">
+                          <button className="btn btn-primary action-btn" onClick={() => handleAdminAction(req._id, req.requestedRole, 'APPROVE')}>Approve</button>
+                          <button className="btn btn-secondary action-btn" style={{borderColor: '#ff6b6b', color: '#ff6b6b'}} onClick={() => handleAdminAction(req._id, req.requestedRole, 'REJECT')}>Reject</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="card full-width bottom-spacing">
+              <h2 className="section-title">Active Personnel & Access Control</h2>
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead><tr><th>Officer Details</th><th>System Status</th><th>Security Action</th></tr></thead>
+                  <tbody>
+                    {activeUsers.map(u => (
+                      <tr key={u._id}>
+                        <td><strong>{u.officerId}</strong><br/>{u.fullName}<br/><span className="action-badge">{u.role}</span></td>
+                        <td>
+                          <span style={{ color: u.status === 'ACTIVE' ? '#0f5132' : '#bf2600', fontWeight: 'bold' }}>{u.status}</span>
+                        </td>
+                        <td className="action-td">
+                          {u.status === 'ACTIVE' ? (
+                            <>
+                              <button className="btn btn-secondary action-btn" style={{borderColor: '#ff6b6b', color: '#ff6b6b'}} onClick={() => handleManageUser(u._id, 'REVOKE')}>Revoke</button>
+                              <button className="btn btn-secondary action-btn" style={{borderColor: '#f59e0b', color: '#f59e0b'}} onClick={() => handleManageUser(u._id, 'EXPIRE')}>Expire Now</button>
+                            </>
+                          ) : (
+                            <button className="btn btn-primary action-btn" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: 'transparent'}} onClick={() => handleManageUser(u._id, 'REACTIVATE')}>Reactivate</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {role !== 'Administrator' && (
+          <div className="dashboard-grid">
+            <div className="card">
               <h2 className="section-title">Evidence Intake</h2>
+              <form onSubmit={handleUpload}>
+                <div className="form-group"><label>Case ID</label><input type="text" className="form-control" value={caseId} onChange={e => setCaseId(e.target.value)} /></div>
+                <div className="form-group"><label>Document</label><input type="file" className="form-control" onChange={e => setFile(e.target.files[0])} required /></div>
+                <button type="submit" className="btn btn-primary">Generate Hash & Store</button>
+              </form>
+              {uploadData && <div className="alert-box alert-success"><strong>ID:</strong> {uploadData.documentId} <br/><strong>V{uploadData.version} Hash:</strong> <br/><span className="hash-badge responsive-hash">{uploadData.fileHash}</span></div>}
             </div>
-            <form onSubmit={handleUpload}>
-              <div className="form-group">
-                <label>Assigned Case ID</label>
-                <input type="text" className="form-control" value={caseId} onChange={(e) => setCaseId(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Document Source (PDF/Image)</label>
-                <input type="file" className="form-control" onChange={(e) => setFile(e.target.files[0])} required />
-              </div>
-              <button type="submit" className="btn btn-primary">Generate Hash & Store</button>
-            </form>
 
-            {uploadData && (
-              <div className="alert-box alert-success">
-                <strong>SYSTEM LOG:</strong> Document Secured<br/>
-                <strong>ID:</strong> {uploadData.documentId} <br/>
-                <strong>SHA-256 Digest:</strong> <br/>
-                <span className="hash-badge">{uploadData.fileHash}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="card">
-            <div className="card-header">
+            <div className="card">
               <h2 className="section-title">Integrity Verification</h2>
-              <span className="section-subtitle">Cross-reference cryptographic digests.</span>
+              <form onSubmit={handleVerify}>
+                <div className="form-group"><label>Document ID</label><input type="text" className="form-control" value={verifyDocId} onChange={e => setVerifyDocId(e.target.value)} required /></div>
+                <div className="form-group"><label>SHA-256 Hash</label><input type="text" className="form-control" value={verifyHash} onChange={e => setVerifyHash(e.target.value)} required /></div>
+                <button type="submit" className="btn btn-secondary">Compare Hash</button>
+              </form>
+              {verifyResult && <div className={`alert-box ${verifyResult.type === 'success' ? 'alert-success' : 'alert-danger'}`}>{verifyResult.message}</div>}
             </div>
-            <form onSubmit={handleVerify}>
-              <div className="form-group">
-                <label>Document ID</label>
-                <input type="text" className="form-control" value={verifyDocId} onChange={(e) => setVerifyDocId(e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>Target SHA-256 Hash</label>
-                <input type="text" className="form-control" value={verifyHash} onChange={(e) => setVerifyHash(e.target.value)} required />
-              </div>
-              <button type="submit" className="btn btn-secondary" style={{marginTop: '10px'}}>Verify File Integrity</button>
-            </form>
-
-            {verifyResult && (
-              <div className={`alert-box ${verifyResult.type === 'success' ? 'alert-success' : 'alert-danger'}`}>
-                <strong>{verifyResult.type === 'success' ? 'STATUS: VERIFIED' : 'STATUS: TAMPERED'}</strong><br/> 
-                {verifyResult.message}
-              </div>
-            )}
           </div>
+        )}
 
-        </div>
-
-        <div className="card full-width">
+        <div className="card full-width top-spacing">
           <div className="table-header-flex">
-            <div>
-              <h2 className="section-title">Cryptographic Audit Ledger</h2>
-              <span className="section-subtitle">Immutable hash-chained records.</span>
-            </div>
-            <div className="form-group search-bar">
-              <input 
-                type="text" 
-                className="form-control" 
-                placeholder="🔍 Search user, action, or hash..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+            <h2 className="section-title">Cryptographic Audit Ledger</h2>
+            <input type="text" className="form-control search-bar" placeholder="🔍 Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
-          
           <div className="table-wrapper">
             <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>User Identity</th>
-                  <th>System Action</th>
-                  <th>Chain Hash (Target)</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Timestamp</th><th>User/Actor</th><th>Action</th><th>Chain Hash</th></tr></thead>
               <tbody>
-                {filteredLogs.length > 0 ? filteredLogs.map((log) => (
+                {auditLogs.filter(log => log.action.includes(searchQuery) || log.user.includes(searchQuery)).map(log => (
                   <tr key={log._id}>
-                    <td>{new Date(log.timestamp).toLocaleString()}</td>
+                    <td>{new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}</td>
                     <td><strong>{log.user}</strong></td>
                     <td><span className="action-badge">{log.action}</span></td>
-                    <td>
-                      <span className="hash-badge" title={log.currentHash}>
-                        {log.currentHash.substring(0, 16)}...
-                      </span>
-                    </td>
+                    <td><span className="hash-badge" title={log.currentHash}>{log.currentHash.substring(0, 16)}...</span></td>
                   </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="4" className="empty-table">No records found matching your search.</td>
-                  </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       </main>
-
-      <footer className="dev-footer">
-        System Prototype Developed by <strong>TEAM</strong> | B.Tech CSE-AIML | SIH 2026 Submission
-      </footer>
+      <footer className="dev-footer">Developed by <strong>Kunal Vats (2411062)</strong> | CaseArmor | SIH 2026</footer>
     </div>
   );
 }
-
 export default App;
