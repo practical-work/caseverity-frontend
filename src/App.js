@@ -8,7 +8,7 @@ function App() {
   const [role, setRole] = useState('');
   const [showDemoGuide, setShowDemoGuide] = useState(true); 
   
-  const [regForm, setRegForm] = useState({ fullName: '', email: '', phone: '', department: 'Haryana Cyber Crime', state: 'Haryana', requestedRole: 'Investigating Officer' });
+  const [regForm, setRegForm] = useState({ fullName: '', email: '', phone: '', department: 'Cyber Crime', state: 'Haryana', requestedRole: 'Investigating Officer' });
   const [otpCode, setOtpCode] = useState('');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   
@@ -161,7 +161,7 @@ function App() {
             </div>
             
             <div className="form-group">
-              <label>Official Email (For OTP)</label>
+              <label>Official Email</label>
               <input type="email" className="form-control" value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} required/>
             </div>
             
@@ -216,7 +216,7 @@ function App() {
         <div className="card login-card">
           <h2 className="section-title">{isAdmin ? 'Administrator Portal' : 'Official Portal'}</h2>
           <form onSubmit={(e) => handleLogin(e, isAdmin)}>
-            <div className="form-group"><label>{isAdmin ? 'Admin ID' : 'Officer ID / Official Email'}</label><input type="text" className="form-control" onChange={e => setLoginForm({...loginForm, email: e.target.value})} required/></div>
+            <div className="form-group"><label>{isAdmin ? 'Admin ID' : 'Officer ID'}</label><input type="text" className="form-control" onChange={e => setLoginForm({...loginForm, email: e.target.value})} required/></div>
             <div className="form-group"><label>Password</label><input type="password" className="form-control" onChange={e => setLoginForm({...loginForm, password: e.target.value})} required/></div>
             <button className="btn btn-primary btn-spacing">Authenticate</button>
             <button type="button" className="btn btn-secondary btn-spacing" onClick={() => setCurrentView('LANDING')}>Back</button>
@@ -229,7 +229,7 @@ function App() {
   return (
     <div className="app-layout">
       <nav className="top-nav">
-        <div className="nav-brand"><h1>CaseVerity Node</h1></div>
+        <div className="nav-brand"><h1>CaseVerity</h1></div>
         <div className="nav-user">{user} | {role} <button className="btn-logout" onClick={() => setCurrentView('LANDING')}>Logout</button></div>
       </nav>
 
@@ -334,7 +334,7 @@ function App() {
           </div>
         </div>
       </main>
-      <footer className="dev-footer">Developed by <strong>Kunal Vats (2411062)</strong> | CaseArmor | SIH 2026</footer>
+      <footer className="dev-footer">Developed by <strong>CaseArmor</strong> | SIH 2026</footer>
     </div>
   );
 }
