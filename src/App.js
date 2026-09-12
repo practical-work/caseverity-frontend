@@ -24,7 +24,7 @@ function App() {
   const [verifyHash, setVerifyHash] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
 
-  const API_URL = 'https://caseverity-api-kunal.onrender.com/api';
+  const API_URL = 'https://caseverity-backend.onrender.com/api';
 
   useEffect(() => {
     if (currentView === 'ADMIN_DASH') { fetchPendingRequests(); fetchActiveUsers(); }
