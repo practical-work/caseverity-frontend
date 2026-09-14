@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+  import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -29,6 +29,7 @@ function App() {
   useEffect(() => {
     if (currentView === 'ADMIN_DASH') { fetchPendingRequests(); fetchActiveUsers(); }
     if (currentView === 'OFFICER_DASH' || currentView === 'ADMIN_DASH') fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
 
   const handleRequestAccess = async (e) => {
@@ -286,4 +287,4 @@ function App() {
   );
 }
 export default App;
-  
+    
