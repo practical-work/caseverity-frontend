@@ -150,7 +150,9 @@ function App() {
               </div>
             </div>
             <div className="form-group"><label>Affiliation Proof (PDF/JPG)</label><input type="file" className="form-control" required disabled={isProcessing}/></div>
-            <button type="submit" className="btn btn-primary btn-spacing" disabled={isProcessing}>{isProcessing ? 'Generating OTP...' : 'Generate Email OTP'}</button>
+            <button type="submit" className="btn btn-primary btn-spacing" disabled={isProcessing}>
+              {isProcessing ? <><span className="spinner"></span> Processing OTP...</> : 'Generate Email OTP'}
+            </button>
             <button type="button" className="btn btn-secondary btn-spacing" onClick={() => setCurrentView('LANDING')} disabled={isProcessing}>Cancel</button>
           </form>
         </div>
@@ -165,7 +167,9 @@ function App() {
           <h2 className="section-title">Verify Email</h2><span className="section-subtitle">Enter code sent to {regForm.email}</span>
           <form onSubmit={handleVerifyOTP}>
             <div className="form-group"><input type="text" className="form-control otp-input" placeholder="000000" onChange={e => setOtpCode(e.target.value)} required disabled={isProcessing}/></div>
-            <button type="submit" className="btn btn-primary" disabled={isProcessing}>{isProcessing ? 'Verifying...' : 'Verify & Submit Request'}</button>
+            <button type="submit" className="btn btn-primary" disabled={isProcessing}>
+              {isProcessing ? <><span className="spinner"></span> Verifying...</> : 'Verify & Submit Request'}
+            </button>
           </form>
         </div>
       </div>
@@ -181,7 +185,9 @@ function App() {
           <form onSubmit={(e) => handleLogin(e, isAdmin)}>
             <div className="form-group"><label>{isAdmin ? 'Admin ID' : 'Officer ID / Official Email'}</label><input type="text" className="form-control" value={loginForm.email} onChange={e => setLoginForm({...loginForm, email: e.target.value})} required disabled={isProcessing}/></div>
             <div className="form-group"><label>Password</label><input type="password" className="form-control" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} required disabled={isProcessing}/></div>
-            <button type="submit" className="btn btn-primary btn-spacing" disabled={isProcessing}>{isProcessing ? 'Authenticating...' : 'Authenticate'}</button>
+            <button type="submit" className="btn btn-primary btn-spacing" disabled={isProcessing}>
+              {isProcessing ? <><span className="spinner"></span> Authenticating...</> : 'Authenticate'}
+            </button>
             <button type="button" className="btn btn-secondary btn-spacing" onClick={() => setCurrentView('LANDING')} disabled={isProcessing}>Back</button>
           </form>
         </div>
@@ -280,3 +286,4 @@ function App() {
   );
 }
 export default App;
+  
