@@ -96,6 +96,57 @@ html, body {
 .table-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
 .search-bar { max-width: 350px; }
 .dev-footer { text-align: center; padding: 25px; color: #94a3b8; font-size: 0.95rem; background: rgba(15, 23, 42, 0.95); margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); }
+/* 🌟 Fully Responsive Demo Guide Popup 🌟 */
+.premium-popup { 
+  background: #ffffff; 
+  padding: 20px 15px; 
+  border-radius: 12px; 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6); 
+  width: 92%; 
+  max-width: 420px; 
+  text-align: left; 
+  position: relative; 
+  margin: 15px auto; 
+  border-left: 5px solid #10b981; 
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+.close-popup-btn { 
+  position: absolute; 
+  top: 12px; 
+  right: 12px; 
+  background: #f1f5f9; 
+  border: none; 
+  width: 28px; 
+  height: 28px; 
+  border-radius: 50%; 
+  font-size: 0.9rem; 
+  cursor: pointer; 
+  color: #475569; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  transition: background 0.2s; 
+}
+
+.close-popup-btn:hover { background: #e2e8f0; color: #0f172a; }
+
+.guide-list { 
+  list-style: none; 
+  padding: 0; 
+  margin: 10px 0 0 0; 
+}
+
+.guide-list li { 
+  padding: 6px 0; 
+  border-bottom: 1px solid #e2e8f0; 
+  font-size: 0.88rem; 
+  color: #334155; 
+  word-break: break-word;
+}
+
+.guide-list li:last-child { border-bottom: none; }
 
 /* MOBILE RESPONSIVENESS */
 @media (max-width: 768px) { 
