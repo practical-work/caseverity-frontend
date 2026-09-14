@@ -41,7 +41,7 @@ function App() {
       await axios.post(`${API_URL}/auth/request-access`, regForm); 
       setCurrentView('OTP_VERIFY'); 
     } catch (err) { 
-      const errorMessage = err.response?.data?.message || err.message || "Network Error: Could not connect to the server. Please try again.";
+      const errorMessage = err.response?.data?.message || err.message || "Network Error: Could not connect to the server.";
       alert(errorMessage); 
     } finally {
       setIsProcessing(false);
@@ -70,7 +70,7 @@ function App() {
       setUser(res.data.user); setRole(res.data.role);
       setCurrentView(isAdmin ? 'ADMIN_DASH' : 'OFFICER_DASH'); setShowDemoGuide(false);
     } catch (err) { 
-      alert(err.response?.data?.message || "Login failed due to a network error."); 
+      alert(err.response?.data?.message || "Login failed."); 
     } finally {
       setIsProcessing(false);
     }
@@ -124,7 +124,7 @@ function App() {
       const res = await axios.post(`${API_URL}/documents/verify`, { documentId: verifyDocId.trim(), providedHash: verifyHash.trim(), user });
       setVerifyResult({ type: 'success', message: res.data.message });
     } catch (err) { 
-      const errorText = err.response?.data?.message || err.response?.data?.error || "Verification failed. Please check the Document ID and Hash.";
+      const errorText = err.response?.data?.message || err.response?.data?.error || "Verification failed. Check Document ID and Hash.";
       setVerifyResult({ type: 'danger', message: errorText }); 
     }
     fetchLogs();
@@ -143,7 +143,7 @@ function App() {
           <li>2. Get OTP. "Pending Details" email is sent.</li>
           <li>3. Click <b>"Administrator Portal"</b> & Login.</li>
           <li>4. Use <b>Approve/Reject/Revoke</b> controls.</li>
-          <li>5. Login using <b>Officer ID</b> sent via email!</li>
+          <li>5. Login using <b>Officer ID</b> sent via email.</li>
         </ul>
       </div>
     );
@@ -282,7 +282,7 @@ function App() {
                               <button className="btn btn-secondary action-btn" style={{borderColor: '#f59e0b', color: '#f59e0b'}} onClick={() => handleManageUser(u._id, 'EXPIRE')}>Expire Now</button>
                             </>
                           ) : (
-                            <button className="btn btn-primary action-btn" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: 'transparent'}} onClick={() => handleManageUser(u._id, 'REACTIVATE')}>Reactivate</button>
+                            <button className="btn btn-primary action-btn" style={{background: '#10b981', borderColor: 'transparent'}} onClick={() => handleManageUser(u._id, 'REACTIVATE')}>Reactivate</button>
                           )}
                         </td>
                       </tr>
@@ -345,4 +345,4 @@ function App() {
   );
 }
 export default App;
-  
+      
