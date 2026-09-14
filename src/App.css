@@ -70,12 +70,74 @@ html, body {
 .otp-input { font-size: 2rem; text-align: center; letter-spacing: 0.5rem; font-weight: 800; background-color: #ffffff; }
 
 /* Responsive Demo Guide Popup */
-.premium-popup { background: #ffffff; padding: 20px 15px; border-radius: 12px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); width: 100%; max-width: 450px; text-align: left; position: relative; margin-bottom: 20px; border-left: 5px solid #10b981; box-sizing: border-box; }
-.close-popup-btn { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.05); border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 1rem; cursor: pointer; color: #475569; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
-.close-popup-btn:hover { background: rgba(0,0,0,0.1); color: #0f172a; }
-.guide-list { list-style: none; padding: 0; margin: 12px 0 0 0; }
-.guide-list li { padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; color: #334155; word-wrap: break-word; }
-.guide-list li:last-child { border-bottom: none; }
+.premium-popup { 
+  background: #ffffff !important; 
+  padding: 20px 15px; 
+  border-radius: 12px; 
+  box-shadow: 0 15px 30px rgba(0,0,0,0.5); 
+  width: 100%; 
+  max-width: 400px; 
+  text-align: left; 
+  position: relative; 
+  margin-bottom: 20px; 
+  border-left: 5px solid #10b981; 
+  box-sizing: border-box; 
+  color: #0f172a !important; 
+}
+.premium-popup h3 { 
+  color: #0f172a !important; 
+  margin-top: 0; 
+  margin-bottom: 12px; 
+  font-size: 1.25rem; 
+  font-weight: 800; 
+}
+.premium-popup p { 
+  color: #1e293b !important; 
+  font-size: 0.95rem; 
+  margin: 6px 0; 
+  font-weight: 600; 
+}
+.premium-popup strong { 
+  color: #000000 !important; 
+}
+.close-popup-btn { 
+  position: absolute; 
+  top: 12px; 
+  right: 12px; 
+  background: rgba(0,0,0,0.05); 
+  border: none; 
+  width: 28px; 
+  height: 28px; 
+  border-radius: 50%; 
+  font-size: 1rem; 
+  cursor: pointer; 
+  color: #475569 !important; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  transition: background 0.2s; 
+}
+.close-popup-btn:hover { 
+  background: rgba(0,0,0,0.1); 
+  color: #0f172a !important; 
+}
+.guide-list { 
+  list-style: none; 
+  padding: 0; 
+  margin: 12px 0 0 0; 
+}
+.guide-list li { 
+  padding: 8px 0; 
+  border-bottom: 1px solid #e2e8f0; 
+  font-size: 0.9rem; 
+  color: #334155 !important; 
+  word-wrap: break-word; 
+  font-weight: 500;
+}
+.guide-list li:last-child { 
+  border-bottom: none; 
+}
+
 
 /* Dashboard Tables */
 .main-container { padding: 1.5rem; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
