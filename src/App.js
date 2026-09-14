@@ -7,7 +7,6 @@ function App() {
   const [user, setUser] = useState('');
   const [role, setRole] = useState('');
   
-  // Strict UI state for locking buttons and showing spinners
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDemoGuide, setShowDemoGuide] = useState(true); 
   
@@ -27,8 +26,7 @@ function App() {
   const [verifyHash, setVerifyHash] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
 
-  // Dynamic API URL depending on deployment environment
-  const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://caseverity-backend.onrender.com/api';
+  const API_URL = 'https://caseverity-backend.onrender.com/api';
 
   useEffect(() => {
     if (currentView === 'ADMIN_DASH') { fetchPendingRequests(); fetchActiveUsers(); }
@@ -38,16 +36,15 @@ function App() {
 
   const handleRequestAccess = async (e) => {
     e.preventDefault();
-    setIsProcessing(true); // Lock the UI immediately
+    setIsProcessing(true);
     try { 
       await axios.post(`${API_URL}/auth/request-access`, regForm); 
       setCurrentView('OTP_VERIFY'); 
     } catch (err) { 
-      // Safely catch errors even if the network connection drops entirely
       const errorMessage = err.response?.data?.message || err.message || "Network Error: Could not connect to the server. Please try again.";
       alert(errorMessage); 
     } finally {
-      setIsProcessing(false); // Unlock the UI
+      setIsProcessing(false);
     }
   };
 
@@ -56,11 +53,9 @@ function App() {
     setIsProcessing(true);
     try {
       const res = await axios.post(`${API_URL}/auth/verify-otp`, { email: regForm.email, otp: otpCode });
-      alert(res.data.message); 
-      setCurrentView('LANDING');
+      alert(res.data.message); setCurrentView('LANDING');
     } catch (err) { 
-      const errorMessage = err.response?.data?.message || "Invalid or expired OTP";
-      alert(errorMessage); 
+      alert(err.response?.data?.message || "Invalid or expired OTP"); 
     } finally {
       setIsProcessing(false);
     }
@@ -73,11 +68,9 @@ function App() {
       const sanitizedPayload = { email: loginForm.email.trim(), password: loginForm.password.trim() };
       const res = await axios.post(`${API_URL}${isAdmin ? '/auth/admin-login' : '/auth/login'}`, sanitizedPayload);
       setUser(res.data.user); setRole(res.data.role);
-      setCurrentView(isAdmin ? 'ADMIN_DASH' : 'OFFICER_DASH'); 
-      setShowDemoGuide(false);
+      setCurrentView(isAdmin ? 'ADMIN_DASH' : 'OFFICER_DASH'); setShowDemoGuide(false);
     } catch (err) { 
-      const errorMessage = err.response?.data?.message || "Login failed due to a network error.";
-      alert(errorMessage); 
+      alert(err.response?.data?.message || "Login failed due to a network error."); 
     } finally {
       setIsProcessing(false);
     }
@@ -183,7 +176,7 @@ function App() {
           <h2 className="section-title">Access Request</h2><span className="section-subtitle">Identity & Affiliation Verification</span>
           <form onSubmit={handleRequestAccess}>
             <div className="form-group"><label>Full Name</label><input type="text" className="form-control" value={regForm.fullName} onChange={e => setRegForm({...regForm, fullName: e.target.value})} required disabled={isProcessing}/></div>
-            <div className="form-group"><label>Official Email (For OTP)</label><input type="email" className="form-control" value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} required disabled={isProcessing}/></div>
+            <div className="form-group"><label>Official Email</label><input type="email" className="form-control" value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} required disabled={isProcessing}/></div>
             <div className="responsive-flex">
               <div className="form-group"><label>Mobile</label><input type="text" className="form-control" value={regForm.phone} onChange={e => setRegForm({...regForm, phone: e.target.value})} required disabled={isProcessing}/></div>
               <div className="form-group"><label>Requested Role</label>
@@ -227,8 +220,8 @@ function App() {
         <div className="card login-card">
           <h2 className="section-title">{isAdmin ? 'Administrator Portal' : 'Official Portal'}</h2>
           <form onSubmit={(e) => handleLogin(e, isAdmin)}>
-            <div className="form-group"><label>{isAdmin ? 'Admin ID' : 'Officer ID / Official Email'}</label><input type="text" className="form-control" value={loginForm.email} onChange={e => setLoginForm({...loginForm, email: e.target.value})} required disabled={isProcessing}/></div>
-            <div className="form-group"><label>Password</label><input type="password" className="form-control" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} required disabled={isProcessing}/></div>
+            <div className="form-group"><label>{isAdmin ? 'Admin ID' : 'Officer ID / Official Email'}</label><input type="text" className="form-control" onChange={e => setLoginForm({...loginForm, email: e.target.value})} required disabled={isProcessing}/></div>
+            <div className="form-group"><label>Password</label><input type="password" className="form-control" onChange={e => setLoginForm({...loginForm, password: e.target.value})} required disabled={isProcessing}/></div>
             <button type="submit" className="btn btn-primary btn-spacing" disabled={isProcessing}>
               {isProcessing ? <><span className="spinner"></span> Authenticating...</> : 'Authenticate'}
             </button>
@@ -241,7 +234,11 @@ function App() {
 
   return (
     <div className="app-layout">
-      <nav className="top-nav"><div className="nav-brand"><h1>CaseVerity</h1></div><div className="nav-user">{user} | {role} <button className="btn-logout" onClick={() => setCurrentView('LANDING')}>Logout</button></div></nav>
+      <nav className="top-nav">
+        <div className="nav-brand"><h1>CaseVerity</h1></div>
+        <div className="nav-user">{user} | {role} <button className="btn-logout" onClick={() => setCurrentView('LANDING')}>Logout</button></div>
+      </nav>
+
       <main className="main-container">
         {role === 'Administrator' && (
           <>
@@ -253,7 +250,8 @@ function App() {
                   <tbody>
                     {pendingRequests.map(req => (
                       <tr key={req._id}>
-                        <td><strong>{req.fullName}</strong><br/>{req.email}</td><td><span className="action-badge">{req.requestedRole}</span><br/><small>{req.department}</small></td>
+                        <td><strong>{req.fullName}</strong><br/>{req.email}</td>
+                        <td><span className="action-badge">{req.requestedRole}</span><br/><small>{req.department}</small></td>
                         <td className="action-td">
                           <button className="btn btn-primary action-btn" onClick={() => handleAdminAction(req._id, req.requestedRole, 'APPROVE')}>Approve</button>
                           <button className="btn btn-secondary action-btn" style={{borderColor: '#ff6b6b', color: '#ff6b6b'}} onClick={() => handleAdminAction(req._id, req.requestedRole, 'REJECT')}>Reject</button>
@@ -264,6 +262,7 @@ function App() {
                 </table>
               </div>
             </div>
+
             <div className="card full-width bottom-spacing">
               <h2 className="section-title">Active Personnel & Access Control</h2>
               <div className="table-wrapper">
@@ -273,12 +272,18 @@ function App() {
                     {activeUsers.map(u => (
                       <tr key={u._id}>
                         <td><strong>{u.officerId}</strong><br/>{u.fullName}<br/><span className="action-badge">{u.role}</span></td>
-                        <td><span style={{ color: u.status === 'ACTIVE' ? '#0f5132' : '#bf2600', fontWeight: 'bold' }}>{u.status}</span></td>
+                        <td>
+                          <span style={{ color: u.status === 'ACTIVE' ? '#0f5132' : '#bf2600', fontWeight: 'bold' }}>{u.status}</span>
+                        </td>
                         <td className="action-td">
                           {u.status === 'ACTIVE' ? (
-                            <><button className="btn btn-secondary action-btn" style={{borderColor: '#ff6b6b', color: '#ff6b6b'}} onClick={() => handleManageUser(u._id, 'REVOKE')}>Revoke</button>
-                            <button className="btn btn-secondary action-btn" style={{borderColor: '#f59e0b', color: '#f59e0b'}} onClick={() => handleManageUser(u._id, 'EXPIRE')}>Expire Now</button></>
-                          ) : (<button className="btn btn-primary action-btn" style={{background: '#10b981', borderColor: 'transparent'}} onClick={() => handleManageUser(u._id, 'REACTIVATE')}>Reactivate</button>)}
+                            <>
+                              <button className="btn btn-secondary action-btn" style={{borderColor: '#ff6b6b', color: '#ff6b6b'}} onClick={() => handleManageUser(u._id, 'REVOKE')}>Revoke</button>
+                              <button className="btn btn-secondary action-btn" style={{borderColor: '#f59e0b', color: '#f59e0b'}} onClick={() => handleManageUser(u._id, 'EXPIRE')}>Expire Now</button>
+                            </>
+                          ) : (
+                            <button className="btn btn-primary action-btn" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: 'transparent'}} onClick={() => handleManageUser(u._id, 'REACTIVATE')}>Reactivate</button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -288,6 +293,7 @@ function App() {
             </div>
           </>
         )}
+
         {role !== 'Administrator' && (
           <div className="dashboard-grid">
             <div className="card">
@@ -299,6 +305,7 @@ function App() {
               </form>
               {uploadData && <div className="alert-box alert-success"><strong>ID:</strong> {uploadData.documentId} <br/><strong>V{uploadData.version} Hash:</strong> <br/><span className="hash-badge responsive-hash">{uploadData.fileHash}</span></div>}
             </div>
+
             <div className="card">
               <h2 className="section-title">Integrity Verification</h2>
               <form onSubmit={handleVerify}>
@@ -310,15 +317,22 @@ function App() {
             </div>
           </div>
         )}
+
         <div className="card full-width top-spacing">
-          <div className="table-header-flex"><h2 className="section-title">Cryptographic Audit Ledger</h2><input type="text" className="form-control search-bar" placeholder="🔍 Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+          <div className="table-header-flex">
+            <h2 className="section-title">Cryptographic Audit Ledger</h2>
+            <input type="text" className="form-control search-bar" placeholder="🔍 Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
           <div className="table-wrapper">
             <table className="data-table">
               <thead><tr><th>Timestamp</th><th>User/Actor</th><th>Action</th><th>Chain Hash</th></tr></thead>
               <tbody>
                 {auditLogs.filter(log => log.action.includes(searchQuery) || log.user.includes(searchQuery)).map(log => (
                   <tr key={log._id}>
-                    <td>{new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}</td><td><strong>{log.user}</strong></td><td><span className="action-badge">{log.action}</span></td><td><span className="hash-badge" title={log.currentHash}>{log.currentHash.substring(0, 16)}...</span></td>
+                    <td>{new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}</td>
+                    <td><strong>{log.user}</strong></td>
+                    <td><span className="action-badge">{log.action}</span></td>
+                    <td><span className="hash-badge" title={log.currentHash}>{log.currentHash.substring(0, 16)}...</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -331,4 +345,4 @@ function App() {
   );
 }
 export default App;
-      
+  
