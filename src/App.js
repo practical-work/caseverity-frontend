@@ -1,4 +1,4 @@
-  import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -6,9 +6,12 @@ function App() {
   const [currentView, setCurrentView] = useState('LANDING'); 
   const [user, setUser] = useState('');
   const [role, setRole] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   
-  const [regForm, setRegForm] = useState({ fullName: '', email: '', phone: '', department: 'Haryana Cyber Crime', state: 'Haryana', requestedRole: 'Investigating Officer' });
+  // Strict UI state for locking buttons and showing spinners
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showDemoGuide, setShowDemoGuide] = useState(true); 
+  
+  const [regForm, setRegForm] = useState({ fullName: '', email: '', phone: '', department: 'Cyber Crime', state: 'Haryana', requestedRole: 'Investigating Officer' });
   const [otpCode, setOtpCode] = useState('');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   
@@ -24,6 +27,7 @@ function App() {
   const [verifyHash, setVerifyHash] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
 
+  // Dynamic API URL depending on deployment environment
   const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : 'https://caseverity-backend.onrender.com/api';
 
   useEffect(() => {
@@ -34,14 +38,16 @@ function App() {
 
   const handleRequestAccess = async (e) => {
     e.preventDefault();
-    setIsProcessing(true);
+    setIsProcessing(true); // Lock the UI immediately
     try { 
       await axios.post(`${API_URL}/auth/request-access`, regForm); 
       setCurrentView('OTP_VERIFY'); 
     } catch (err) { 
-      alert(err.response?.data?.message || "Error submitting request. Please try again."); 
+      // Safely catch errors even if the network connection drops entirely
+      const errorMessage = err.response?.data?.message || err.message || "Network Error: Could not connect to the server. Please try again.";
+      alert(errorMessage); 
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); // Unlock the UI
     }
   };
 
@@ -53,7 +59,8 @@ function App() {
       alert(res.data.message); 
       setCurrentView('LANDING');
     } catch (err) { 
-      alert(err.response?.data?.message || "Invalid OTP"); 
+      const errorMessage = err.response?.data?.message || "Invalid or expired OTP";
+      alert(errorMessage); 
     } finally {
       setIsProcessing(false);
     }
@@ -67,8 +74,10 @@ function App() {
       const res = await axios.post(`${API_URL}${isAdmin ? '/auth/admin-login' : '/auth/login'}`, sanitizedPayload);
       setUser(res.data.user); setRole(res.data.role);
       setCurrentView(isAdmin ? 'ADMIN_DASH' : 'OFFICER_DASH'); 
+      setShowDemoGuide(false);
     } catch (err) { 
-      alert(err.response?.data?.message || "Login failed"); 
+      const errorMessage = err.response?.data?.message || "Login failed due to a network error.";
+      alert(errorMessage); 
     } finally {
       setIsProcessing(false);
     }
@@ -84,24 +93,36 @@ function App() {
       reason = window.prompt("Enter reason for rejection:");
       if (!reason) return;
     }
-    await axios.post(`${API_URL}/auth/admin/action`, { requestId, action, assignedRole, reason });
-    fetchPendingRequests(); 
-    alert(action === 'APPROVE' ? `Access Approved for ${assignedRole}. Credentials dispatched.` : `Request Rejected. Email sent.`);
+    try {
+      await axios.post(`${API_URL}/auth/admin/action`, { requestId, action, assignedRole, reason });
+      fetchPendingRequests(); 
+      alert(action === 'APPROVE' ? `Access Approved for ${assignedRole}. Credentials dispatched.` : `Request Rejected. Email sent.`);
+    } catch (err) {
+      alert(err.response?.data?.message || "Action failed.");
+    }
   };
 
   const handleManageUser = async (userId, action) => {
     if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
-    await axios.post(`${API_URL}/auth/admin/manage-user`, { userId, action });
-    fetchActiveUsers();
-    alert(`Action ${action} completed. Email dispatched to user.`);
+    try {
+      await axios.post(`${API_URL}/auth/admin/manage-user`, { userId, action });
+      fetchActiveUsers();
+      alert(`Action ${action} completed. Email dispatched to user.`);
+    } catch (err) {
+      alert(err.response?.data?.message || "Management action failed.");
+    }
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('file', file); formData.append('caseId', caseId); formData.append('user', user);
-    const res = await axios.post(`${API_URL}/documents/upload`, formData);
-    setUploadData(res.data); setVerifyDocId(res.data.documentId); setVerifyHash(res.data.fileHash); fetchLogs();
+    try {
+      const res = await axios.post(`${API_URL}/documents/upload`, formData);
+      setUploadData(res.data); setVerifyDocId(res.data.documentId); setVerifyHash(res.data.fileHash); fetchLogs();
+    } catch (err) {
+      alert(err.response?.data?.message || "Upload failed.");
+    }
   };
 
   const handleVerify = async (e) => {
@@ -110,15 +131,35 @@ function App() {
       const res = await axios.post(`${API_URL}/documents/verify`, { documentId: verifyDocId.trim(), providedHash: verifyHash.trim(), user });
       setVerifyResult({ type: 'success', message: res.data.message });
     } catch (err) { 
-      const errorText = err.response?.data?.message || err.response?.data?.error || "Verification failed.";
+      const errorText = err.response?.data?.message || err.response?.data?.error || "Verification failed. Please check the Document ID and Hash.";
       setVerifyResult({ type: 'danger', message: errorText }); 
     }
     fetchLogs();
   };
 
+  const DemoGuide = () => {
+    if (!showDemoGuide) return null;
+    return (
+      <div className="premium-popup">
+        <button className="close-popup-btn" onClick={() => setShowDemoGuide(false)}>✖</button>
+        <h3>💡 SIH 2026 Demo Guide</h3>
+        <p><strong>Admin:</strong> admin@caseverity.gov.in / Admin@2026</p>
+        <p style={{ marginTop: '10px' }}><strong>Step-by-Step Flow:</strong></p>
+        <ul className="guide-list">
+          <li>1. Click <b>"Request Access"</b>.</li>
+          <li>2. Get OTP. "Pending Details" email is sent.</li>
+          <li>3. Click <b>"Administrator Portal"</b> & Login.</li>
+          <li>4. Use <b>Approve/Reject/Revoke</b> controls.</li>
+          <li>5. Login using <b>Officer ID</b> sent via email!</li>
+        </ul>
+      </div>
+    );
+  };
+
   if (currentView === 'LANDING') {
     return (
       <div className="landing-container">
+        <DemoGuide />
         <div className="landing-overlay">
           <div className="landing-content">
             <h1 className="main-heading">CASEVERITY</h1>
@@ -137,6 +178,7 @@ function App() {
   if (currentView === 'REQUEST_ACCESS') {
     return (
       <div className="login-wrapper">
+        <DemoGuide />
         <div className="card login-card request-card">
           <h2 className="section-title">Access Request</h2><span className="section-subtitle">Identity & Affiliation Verification</span>
           <form onSubmit={handleRequestAccess}>
@@ -181,6 +223,7 @@ function App() {
     const isAdmin = currentView === 'ADMIN_LOGIN';
     return (
       <div className="login-wrapper">
+        <DemoGuide />
         <div className="card login-card">
           <h2 className="section-title">{isAdmin ? 'Administrator Portal' : 'Official Portal'}</h2>
           <form onSubmit={(e) => handleLogin(e, isAdmin)}>
@@ -271,11 +314,11 @@ function App() {
           <div className="table-header-flex"><h2 className="section-title">Cryptographic Audit Ledger</h2><input type="text" className="form-control search-bar" placeholder="🔍 Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
           <div className="table-wrapper">
             <table className="data-table">
-              <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Chain Hash</th></tr></thead>
+              <thead><tr><th>Timestamp</th><th>User/Actor</th><th>Action</th><th>Chain Hash</th></tr></thead>
               <tbody>
                 {auditLogs.filter(log => log.action.includes(searchQuery) || log.user.includes(searchQuery)).map(log => (
                   <tr key={log._id}>
-                    <td>{new Date(log.timestamp).toLocaleString()}</td><td><strong>{log.user}</strong></td><td><span className="action-badge">{log.action}</span></td><td><span className="hash-badge" title={log.currentHash}>{log.currentHash.substring(0, 16)}...</span></td>
+                    <td>{new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}</td><td><strong>{log.user}</strong></td><td><span className="action-badge">{log.action}</span></td><td><span className="hash-badge" title={log.currentHash}>{log.currentHash.substring(0, 16)}...</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -283,8 +326,9 @@ function App() {
           </div>
         </div>
       </main>
+      <footer className="dev-footer">Developed by <strong>CaseArmor</strong> | SIH 2026</footer>
     </div>
   );
 }
 export default App;
-    
+      
